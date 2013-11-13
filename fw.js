@@ -108,11 +108,6 @@ var FSO = fso = new ActiveXObject("Scripting.FileSystemObject");
 var WshShell= new ActiveXObject("WScript.Shell");
 WshShell.CurrentDirectory= (WScript.ScriptFullName+"").replace(/[^\\]+$/g,"");
 
-function Log(Data)
-{
-
-}
-
 function GenerateString(L)
 {
 	if (!L) L=8;
@@ -429,7 +424,7 @@ function GetDesktopHeight()
 //@DesktopWidth Width of the desktop screen in pixels. (Horizontal resolution) 
 function GetDesktopWidth()
 {
-	var mon = WMIQuery("Winmgmts:\\\\.\\root\\cimv2", "Select * From Win32_DesktopMonitor where DeviceID = 'DesktopMonitor1'")[0];
+	var mon = WMIQuery("winmgmts:\\\\.\\root\\cimv2", "Select * From Win32_DesktopMonitor where DeviceID = 'DesktopMonitor1'")[0];
 	return mon.ScreenWidth
 }
 //WScript.Echo(GetDesktopWidth());
@@ -691,7 +686,7 @@ function ProcessWait(process, timeout)
 	while (pid=ProcessExists(process))
 	{
 		WScript.Sleep(250);
-		if (timeout<>0 && time_tmp>=timeout) break; else time_tmp+=0.250; 
+		if (timeout!=0 && time_tmp>=timeout) break; else time_tmp+=0.250; 
 	}
 	return pid;
 }
@@ -705,86 +700,49 @@ function ProcessWaitClose(process, timeout)
 {
 	timeout = timeout || 0;
 	var time_tmp=0, pid=0;
-	while (!(pid=ProcessExists(process))
+	while (!(pid=ProcessExists(process)))
 	{
 		WScript.Sleep(250);
-		if (timeout<>0 && time_tmp>=timeout) break; else time_tmp+=0.250; 
+		if (timeout!=0 && time_tmp>=timeout) break; else time_tmp+=0.250; 
 	}
 	return pid;
 }
 //WScript.Echo(ProcessWaitClose("notepad.exe"));
 //WScript.Quit();
 
+
 // File, Directory and Disk Managment
-/*
-TODO
 
-DirCopy Copies a directory and all sub-directories and files (Similar to xcopy).
-DirCreate Creates a directory/folder.
-DirGetSize Returns the size in bytes of a given directory.
-DirMove Moves a directory and all sub-directories and files.
-DirRemove Deletes a directory/folder.
-DriveGetDrive Returns an array containing the enumerated drives.
-DriveGetFileSystem Returns File System Type of a drive.
-DriveGetLabel Returns Volume Label of a drive, if it has one.
-DriveGetSerial Returns Serial Number of a drive.
-DriveGetType Returns drive type.
-DriveMapAdd Maps a network drive.
-DriveMapDel Disconnects a network drive.
-DriveMapGet Retrieves the details of a mapped drive.
-DriveSetLabel Sets the Volume Label of a drive.
-DriveSpaceFree Returns the free disk space of a path in Megabytes.
-DriveSpaceTotal Returns the total disk space of a path in Megabytes.
-DriveStatus Returns the status of the drive as a string.
-FileChangeDir Changes the current working directory.
-FileClose Closes a previously opened text file.
-FileCopy Copies one or more files. 
-FileCreateNTFSLink Creates an NTFS hardlink to a file or a directory
-FileCreateShortcut Creates a shortcut (.lnk) to a file.
-FileDelete Delete one or more files.
-FileExists Checks if a file or directory exists.
-FileFindFirstFile Returns a search "handle" according to file search string.
-FileFindNextFile Returns a filename according to a previous call to FileFindFirstFile.
-FileFlush Flushes the file's buffer to disk.
-FileGetAttrib Returns a code string representing a file's attributes.
-FileGetEncoding Determines the text encoding used in a file.
-FileGetLongName Returns the long path+name of the path+name passed.
-FileGetPos Retrieves the current file position.
-FileGetShortcut Retrieves details about a shortcut.
-FileGetShortName Returns the 8.3 short path+name of the path+name passed.
-FileGetSize Returns the size of a file in bytes.
-FileGetTime Returns the time and date information for a file.
-FileGetVersion Returns the "File" version information.
-FileInstall Include and install a file with the compiled script.
-FileMove Moves one or more files
-FileOpen Opens a text file for reading or writing.
-FileOpenDialog Initiates a Open File Dialog.
-FileRead Read in a number of characters from a previously opened text file.
-FileReadLine Read in a line of text from a previously opened text file.
-FileRecycle Sends a file or directory to the recycle bin.
-FileRecycleEmpty Empties the recycle bin.
-FileSaveDialog Initiates a Save File Dialog.
-FileSelectFolder Initiates a Browse For Folder dialog.
-FileSetAttrib Sets the attributes of one or more files.
-FileSetPos Sets the current file position.
-FileSetTime Sets the timestamp of one of more files.
-FileWrite Append a text/data to the end of a previously opened file.
-FileWriteLine Append a line of text to the end of a previously opened text file.
-IniDelete Deletes a value from a standard format .ini file.
-IniRead Reads a value from a standard format .ini file.
-IniReadSection Reads all key/value pairs from a section in a standard format .ini file.
-IniReadSectionNames Reads all sections in a standard format .ini file.
-IniRenameSection Renames a section in a standard format .ini file.
-IniWrite Writes a value to a standard format .ini file.
-IniWriteSection Writes a section to a standard format .ini file.
-*/
+//DirCopy Copies a directory and all sub-directories and files (Similar to xcopy).
+function DirCopy(SourceDir, DestDir, flag)
+{
+	SourceDir = WshShell.ExpandEnvironmentStrings(SourceDir);
+	CreateDir(DestDir);
+	
+	flag = flag || 0;
+	FSO.CopyFolder(SourceDir, DestDir, flag);
+	return 1;
+}
 
+//DirCreate Creates a directory/folder.
+function CreateDir(Path)
+{
+	Path = WshShell.ExpandEnvironmentStrings(Path);
+	__FolderCreate(Path);
+	return 1;
+}
 
-// FileSystem Functions
+function __FolderCreate(FolderPath)
+{
+	if (!fso.FolderExists(FolderPath))
+	{
+		__FolderCreate(fso.GetParentFolderName(FolderPath));
+		fso.CreateFolder(FolderPath);
+	}
+}
 
-
-// DeleteFile (�������������� ��������. ��������� ��� ������� ������, ��� � ������ ����)
-function DeleteFile(Path)
+//FileDelete Delete one or more files. (принудительное удаление. принимает как массивы файлов, так и просто путь) поддерживает удаление по маске.
+function FileDelete(Path)
 {
     if (/Array/i.test(Path.constructor+"")) 
     {
@@ -796,157 +754,262 @@ function DeleteFile(Path)
 
 	Path = WshShell.ExpandEnvironmentStrings(Path);
 	try {
-		if (isFile(Path))
-		FSO.GetFile(Path).Delete(true);
-		
-	}catch (e) {Log(Path +"  "+e.description);}
+		FSO.DeleteFile(Path, true); return 1;
+	}catch (e) {return 0}
 }
 
-function isFile(Path)
+//FileExists Checks if a file or directory exists.
+function FileExists(Path)
 {
 	Path = WshShell.ExpandEnvironmentStrings(Path);
-	return fso.FileExists(Path);
+	return FSO.FolderExists(Path) || FSO.FileExists(Path);
 }
 
-function isFolder(Path)
+//DirMove Moves a directory and all sub-directories and files.
+function DirMove(SourceDir, DestDir)
 {
-	Path = WshShell.ExpandEnvironmentStrings(Path);
-	return fso.FolderExists(Path);
+	try {
+		FSO.MoveFolder(SourceDir, DestDir, true);
+		return 1;
+	} catch(e) {return 0;}
+	
 }
 
-// ���� ���� ��� ����� � ����� ������
-function Exists(Path)
+//FileMove Moves one or more files
+function FileMove(SourceFile, DestFile)
 {
-	Path = WshShell.ExpandEnvironmentStrings(Path);
-	return fso.FolderExists(Path) || fso.FileExists(Path);
-}
-
-function GetFiles(Path)
-{
-	var Result = [];
-	Path = WshShell.ExpandEnvironmentStrings(Path);
-	if (isExists(Path))
-		return new Enumerator(FSO.GetFolder(Path).Files).toArray();
-	else return [];
-}
-
-function GetDrives()
-{
-	var D = (new Enumerator(FSO.Drives).toArray().toString().replace(/A:,/,"").replace(/:/g,":\\").split(","));
-	var Drives=[];
-	for (var i=0; i<D.length; i++)
-	{
-		try {
-			if (FSO.GetDrive(D[i]).IsReady) Drives.push(D[i]);
-		} catch (e) {}
-	}
-	return Drives;
-}
-
-function CreateDirectory(Path)
-{
-	Path = WshShell.ExpandEnvironmentStrings(Path);
-	FolderCreate(Path);
-}
-
-function FolderCreate(FolderPath)
-{
-	if (!fso.FolderExists(FolderPath))
-	{
-		FolderCreate(fso.GetParentFolderName(FolderPath));
-		fso.CreateFolder(FolderPath);
-	}
-}
-
-// Read|Write TextFiles Functions
-
-function ReadTextFile(Path)
-{
-	if (!Path) return "";
-	if (!isFile(Path)) return "";
-	Path = WshShell.ExpandEnvironmentStrings(Path);
-	if (FSO.GetFile(Path).Size==0) return "";
-
-	try 
-	{
-		var Stream = FSO.OpenTextFile(Path, 1, 0),
-		Result = Stream.ReadAll();
-		Stream.Close();
-		return Result;
-	}
-	catch (e) {Log("ReadTextFile  -"+Path+" "+e.description)};
-}
-
-function CreateTextFile(Path)
-{
-	Path = WshShell.ExpandEnvironmentStrings(Path);	
-	return fso.OpenTextFile(Path, 2, 1)
-}
-
-// Inet Funcitons
-function DownloadFileFromURL(Url, FileDest)
-{
-	if (!FileDest || !Url) return null;
-
-	DeleteFile(FileDest);
-
-	FileDest = WshShell.ExpandEnvironmentStrings(FileDest);
-	var oXMLHTTP = new ActiveXObject("Msxml2.XMLHTTP");
-	oXMLHTTP.open ("GET", Url, false);
-	oXMLHTTP.send(null);
-	var oADOStream = new ActiveXObject("ADODB.Stream");
-	oADOStream.Mode = 3;
-	oADOStream.Type = 1;
-	oADOStream.Open()
-	oADOStream.Write (oXMLHTTP.responseBody);
-	oADOStream.SaveToFile(FileDest, 2);
-	oADOStream.Close();
-	return FileDest;
-}
-
-
-function SendFileToURL(fileName, param, url){
-	param = param || UploadParam;
-	url = url || UploadURL;
-
-    if (/Array/i.test(fileName.constructor+"")) 
+	if (/Array/i.test(Path.constructor+"")) 
     {
-	for (var i=0, l=fileName.length;i<l;i++)
-	SendFileToURL(fileName[i], param, url);
-	return fileName;
+		for (var i=0, l=Path.length;i<l;i++)
+		FileMove(Path[i]);
+		return 1;
     }
-    if (fileName=="") return;
-    if (!isFile(fileName)) return;
-    
-    fileName = WshShell.ExpandEnvironmentStrings(fileName);
-    var boundary = "---------------------------aspuploader"
-    var http = new ActiveXObject("WinHttp.WinHttpRequest.5.1")
-    var st = new ActiveXObject("ADODB.Stream")
-    st.Type = 1
-    st.Open()
-    st.LoadFromFile(fileName)
-    var fileBody = st.Read()
-    st.Close(); 
-    st.Open(); st.Type = 2
-    st.Charset = "Windows-1251"
-    st.WriteText("--" + boundary + "\r\nContent-Disposition: form-data; name=\""+param+"\"; filename=\"" + fileName + "\"\r\nContent-Type: octet/stream\r\n\r\n")
-    st.Position = 0; st.Type = 1; st.Position = st.Size
-    st.Write(fileBody)
-    st.Position = 0; st.Type = 2; st.Position = st.size
-    st.WriteText("\r\n--" + boundary + "--")
-    st.Position = 0
-    st.Type = 1
-    http.SetTimeouts(0,0,0,0);
-    eval("http.Option(4) = 0x3300");  
-    http.Open("POST",url,false);
-    http.SetRequestHeader("Content-Type","multipart/form-data; boundary=" + boundary);
-    http.Send(st.Read());
-    return fileName;
+	
+	try {
+		FSO.MoveFile(SourceDir, DestDir);
+		return 1;
+	} catch(e) {return 0;}
+	
 }
 
-// Pack|Unpack Functions
-function ExpandCab(Source, Dest)
+//DirRemove Deletes a directory/folder.
+function DirRemove(Path)
 {
-	DeleteFile(Dest);
-	WshShell.Run("expand \""+Source+"\" \""+Dest+"\"", 0, true);
+	Path = WshShell.ExpandEnvironmentStrings(Path.replace(/\\+$/, ""));
+	var main_folder = fso.GetFolder(Path);
+
+	function DirWithSubFolders(_folder)
+	{
+		new Enumerator(_folder.SubFolders).toArray().forEach(function (f){try {DirWithSubFolders(_folder);} catch (e) {} });
+		try {_folder.Delete(true);} catch(e) {}
+	}
+
+	DirWithSubFolders(main_folder);
+	try {main_folder.Delete(true);} catch(e) {}
 }
+//DirRemove("%TMP%\\Fine.SSR11");
+//WScript.Quit();
+
+//FileCopy Copies one or more files. 
+function FileCopy(source, dest, flag)
+{
+	flag = flag || 0;
+	try {
+		FSO.CopyFile(source, dest, flag)
+		return 1;
+	} catch(e) {return 0;}
+}
+
+// DriveGetDrive Returns an array containing the enumerated drives.
+function DriveGetDrive(type, available_flag)
+{
+	type = type || "ALL";
+	type = type.toUpperCase();
+	var Drives=[];
+	var D = (new Enumerator(FSO.Drives).toArray().toString().replace(/A:,/,"").split(","));
+	
+	available_flag = available_flag || 0;
+	if (!available_flag) Drives = D; 
+	
+	if (available_flag)
+	{
+		Drives=[];
+		for (var i=0; i<D.length; i++)
+		{
+			try {
+				if (FSO.GetDrive(D[i]).IsReady) {Drives.push(D[i]); ;}
+			} catch (e) {}
+		}
+	}
+	
+	if (type=="ALL") return Drives;
+	
+	//type "CDROM", "REMOVABLE", "FIXED", "NETWORK", "RAMDISK", or "UNKNOWN"
+/*
+    0 - неизвестное устройство.
+    1 - устройство со сменным носителем.
+    2 - жёсткий диск.
+    3 - сетевой диск.
+    4 - CD-ROM.
+    5 - RAM-диск.
+*/
+	var types=["UNKNOWN", "REMOVABLE", "FIXED", "NETWORK", "CDROM", "RAMDISK"];
+	
+	var Result = [];
+	type = types.indexOf(type);
+	
+	return Drives.filter(function (d){return FSO.GetDrive(d).DriveType==type});
+}
+//WScript.Echo(DriveGetDrive("ALL", true));
+//WScript.Echo(DriveGetDrive("ALL"));
+//WScript.Quit()
+
+//FileGetVersion Returns the "File" version information.
+function FileGetVersion(filespec){
+	return ""+fso.GetFileVersion(WshShell.ExpandEnvironmentStrings(filespec));
+}
+
+//FileChangeDir Changes the current working directory.
+function FileChangeDir(dir){
+	try {
+		WshShell.CurrentDirectory=WshShell.ExpandEnvironmentStrings(dir);
+		return 1;
+	} catch(e) {
+		return 0;
+	}
+	
+}
+
+//DriveGetFileSystem Returns File System Type of a drive.
+function DriveGetFileSystem(Drive)
+{
+	Drive=Drive.replace(/:.*$/, ":\\");
+	return FSO.GetDrive(Drive).FileSystem;
+}
+
+//DriveGetLabel Returns Volume Label of a drive, if it has one.
+function DriveGetLabel(Drive)
+{
+	Drive=Drive.replace(/:.*$/, ":\\");
+	return FSO.GetDrive(Drive).VolumeName;
+}
+//WScript.Echo(DriveGetLabel(GetHomeDrive()));
+//WScript.Quit();
+
+
+//DriveGetSerial Returns Serial Number of a drive.
+function DriveGetSerial(Drive)
+{
+	Drive=Drive.replace(/:.*$/, ":\\");
+	return FSO.GetDrive(Drive).SerialNumber;
+}
+
+//DriveGetType Returns drive type.
+function DriveGetType(Drive)
+{
+	Drive=Drive.replace(/:.*$/, ":\\");
+/*
+    0 - неизвестное устройство.
+    1 - устройство со сменным носителем.
+    2 - жёсткий диск.
+    3 - сетевой диск.
+    4 - CD-ROM.
+    5 - RAM-диск.
+*/
+	var types=["UNKNOWN", "REMOVABLE", "FIXED", "NETWORK", "CDROM", "RAMDISK"];
+	return types[FSO.GetDrive(Drive).DriveType];
+}
+//WScript.Echo(DriveGetType(GetHomeDrive()));
+//WScript.Quit();
+
+//DriveMapAdd Maps a network drive.
+function DriveMapAdd(strLocalDrive, strRemoteShare, persistent, strUser, strPassword)
+{
+	try {
+		persistent = persistent || "";
+		strUser = strUser || ""; 
+		strPassword = strPassword || "";
+	
+		var objNetwork = new ActiveXObject("WScript.Network");
+		objNetwork.MapNetworkDrive(strLocalDrive, strRemoteShare, persistent, strUser, strPassword);
+		return 1;
+	} catch(e) {
+		return 0;
+	}
+}
+
+//DriveMapDel Disconnects a network drive.
+function DriveMapDel(strLocalDrive)
+{
+	try {
+		var objNetwork = new ActiveXObject("WScript.Network");
+		objNetwork.RemoveNetworkDrive(strName, true);
+		return 1;
+	} catch(e) {
+		return 0;
+	}
+}
+
+//DriveMapGet Retrieves the details of a mapped drive.
+function DriveMapGet(strDrive)
+{
+	var strDrive = strDrive.replace(/:.*$/, ":\\");
+	try {
+		return WMIQuery("winmgmts:\\\\.\\root\\cimv2", "Select * from Win32_LogicalDisk Where DeviceID = '"+strDrive+"'")[0].ProviderName;
+	} catch(e) {
+		return strDrive;
+	}
+}
+
+//DriveSetLabel Sets the Volume Label of a drive.
+function DriveSetLabel(Drive, NewLabel)
+{
+	try {
+			Drive=Drive.replace(/:.*$/, ":\\");
+			FSO.GetDrive(Drive).VolumeName = NewLabel;
+			return 1;
+	} catch(e) {
+		return 0;
+	}
+}
+//DriveSetLabel(GetHomeDrive(), "Hello");
+//WScript.Quit();
+
+//DriveSpaceFree Returns the free disk space of a path in Megabytes.
+function DriveSpaceFree(Drive)
+{
+	try {
+			Drive=Drive.replace(/:.*$/, ":");
+			return Math.round(FSO.GetDrive(Drive).FreeSpace/1024/1024);
+	} catch(e) {
+		return 0;
+	}
+}
+//WScript.Echo(DriveSpaceFree("C:\\"));
+//WScript.Quit();
+
+//DriveSpaceTotal Returns the total disk space of a path in Megabytes.
+function DriveSpaceTotal(Drive)
+{
+	try {
+			Drive=Drive.replace(/:.*$/, ":");
+			return Math.round(FSO.GetDrive(Drive).TotalSize/1024/1024);
+	} catch(e) {
+		return 0;
+	}
+}
+
+//DriveStatus Returns the status of the drive as a string.
+function DriveStatus(strDrive)
+{
+	var strDrive = strDrive.replace(/:.*$/, ":\\");
+	try {
+		FSO.GetDrive(strDrive);
+	} catch(e) {
+		return "INVALID";
+	}
+	
+	return FSO.GetDrive(strDrive).IsReady? "READY":"NOTREADY";
+}
+//WScript.Echo(DriveStatus("d:"));
+//WScript.Quit();
